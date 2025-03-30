@@ -1,0 +1,168 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*;
+
+public class StudentFileApp extends JFrame {
+    private static final String FILE_NAME = "dataAssignment.txt";
+    
+    private JTextField idField, nameField;
+    private JTextArea outputArea;
+    
+    public StudentFileApp() {
+        setTitle("Student File Manager");
+        setSize(500, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+        
+        JPanel inputPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        inputPanel.add(new JLabel("Student ID:"));
+        idField = new JTextField();
+        inputPanel.add(idField);
+        
+        inputPanel.add(new JLabel("Student Name:"));
+        nameField = new JTextField();
+        inputPanel.add(nameField);
+        
+        JButton addButton = new JButton("Add Student");
+        addButton.addActionListener(e -> saveStudent());
+        inputPanel.add(addButton);
+        
+        JButton deleteButton = new JButton("Delete Student");
+        deleteButton.addActionListener(e -> deleteStudent());
+        inputPanel.add(deleteButton);
+        
+ 
+        outputArea = new JTextArea();
+        outputArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(outputArea);
+        
+     
+        add(inputPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+      
+        initializeFile();
+        
+        setVisible(true);
+    }
+    
+    private void initializeFile() {
+        File file = new File(FILE_NAME);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+                outputArea.append("✓ Created new data file: " + FILE_NAME + "\n");
+            } catch (IOException e) {
+                outputArea.append("✗ Error creating data file: " + e.getMessage() + "\n");
+            }
+        } else {
+            outputArea.append("✓ Data file already exists: " + FILE_NAME + "\n");
+        }
+    }
+    
+    private void saveStudent() {
+        try {
+            int id = Integer.parseInt(idField.getText());
+            String name = nameField.getText();
+            
+            if (name.trim().isEmpty()) {
+                outputArea.append("✗ Student name cannot be empty\n");
+                return;
+            }
+            
+            
+            if (studentExists(id)) {
+                outputArea.append("✗ Student with ID " + id + " already exists\n");
+                return;
+            }
+            
+            
+            try (PrintWriter writer = new PrintWriter(new FileWriter(FILE_NAME, true))) {
+                writer.println(id + "," + name);
+                outputArea.append("✓ Student " + name + " (ID: " + id + ") added successfully\n");
+                clearFields();
+            } catch (IOException e) {
+                outputArea.append("✗ Error writing to file: " + e.getMessage() + "\n");
+            }
+        } catch (NumberFormatException e) {
+            outputArea.append("✗ Invalid ID format. Please enter a number.\n");
+        }
+    }
+    
+    private void deleteStudent() {
+        try {
+            int id = Integer.parseInt(idField.getText());
+            
+           
+            List<String> lines = new ArrayList<>();
+            boolean found = false;
+            
+            try (BufferedReader reader = new BufferedReader(new FileReader(FILE_NAME))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length >= 2 && Integer.parseInt(parts[0]) == id) {
+                        found = true;
+                    } else {
+                        lines.add(line);
+                    }
+                }
+            } catch (IOException e) {
+                outputArea.append("✗ Error reading file: " + e.getMessage() + "\n");
+                return;
+            }
+            
+           
+            try (PrintWriter writer = new PrintWriter(new FileWriter(FILE_NAME))) {
+                for (String line : lines) {
+                    writer.println(line);
+                }
+                
+                if (found) {
+                    outputArea.append("✓ Student with ID " + id + " deleted successfully\n");
+                    clearFields();
+                } else {
+                    outputArea.append("✗ No student found with ID " + id + "\n");
+                }
+            } catch (IOException e) {
+                outputArea.append("✗ Error writing to file: " + e.getMessage() + "\n");
+            }
+        } catch (NumberFormatException e) {
+            outputArea.append("✗ Invalid ID format. Please enter a number.\n");
+        }
+    }
+    
+    private boolean studentExists(int id) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_NAME))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2 && Integer.parseInt(parts[0]) == id) {
+                    return true;
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
+            outputArea.append("✗ Error checking file: " + e.getMessage() + "\n");
+        }
+        return false;
+    }
+    
+    private void clearFields() {
+        idField.setText("");
+        nameField.setText("");
+    }
+    
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            new StudentFileApp();
+        });
+    }
+}
